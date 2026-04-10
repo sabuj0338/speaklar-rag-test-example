@@ -35,11 +35,13 @@ async def lifespan(app: FastAPI):
     product_names = [item["text"] for item in id_map.values()]
     categories = sorted({item.get("category", "") for item in id_map.values() if item.get("category")})
     category_products: dict[str, list[dict]] = {}
+    product_lookup: dict[str, dict] = {}
     for item in catalog:
         category = item.get("category")
         if not category:
             continue
         category_products.setdefault(normalize_text(category), []).append(item)
+        product_lookup[normalize_text(item["text"])] = item
 
     index = faiss.read_index(str(settings.faiss_index_path))
     model, embedder_name = load_embedder(settings.embedding_model)
@@ -58,6 +60,7 @@ async def lifespan(app: FastAPI):
     app.state.retriever = Retriever(model=model, index=index, id_map=id_map)
     app.state.catalog = catalog
     app.state.category_products = category_products
+    app.state.product_lookup = product_lookup
     app.state.embedder_name = embedder_name
     app.state.entity_resolver = EntityResolver(product_names=product_names, categories=categories)
     app.state.state_store = RedisStateStore(redis_client) if redis_client else InMemoryStateStore()

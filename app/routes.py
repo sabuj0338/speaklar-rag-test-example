@@ -46,6 +46,7 @@ def ask(request: Request, query: str, session_id: str) -> AskResponse:
     retriever = request.app.state.retriever
     catalog = request.app.state.catalog
     category_products = request.app.state.category_products
+    product_lookup = request.app.state.product_lookup
     state_store = request.app.state.state_store
     cache_store = request.app.state.cache_store
     entity_resolver = request.app.state.entity_resolver
@@ -101,6 +102,9 @@ def ask(request: Request, query: str, session_id: str) -> AskResponse:
         results = catalog
     elif resolved.intent in {"category_availability", "list_category_products"} and resolved.category:
         results = category_products.get(normalize_text(resolved.category), [])
+    elif resolved.intent in {"availability_product", "price_product"} and resolved.product:
+        direct_match = product_lookup.get(normalize_text(resolved.product))
+        results = [direct_match] if direct_match else []
     elif resolved.intent == "price_product" and not resolved.product and len(state.get("active_products", [])) > 1:
         results = catalog
     else:
