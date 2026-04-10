@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Commerce RAG Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: "#14213d",
+              paper: "#f7f3ea",
+              accent: "#d97706",
+              accentSoft: "#fde68a",
+              line: "#d6d3d1",
+            },
+            boxShadow: {
+              panel: "0 18px 50px rgba(20, 33, 61, 0.12)",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="min-h-screen bg-paper text-ink">
+    <div
+      class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.22),_transparent_35%),linear-gradient(180deg,_#fffdf8_0%,_#f7f3ea_100%)]"
+    >
+      <div
+        class="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-6 md:px-6"
+      >
+        <header
+          class="mb-6 flex flex-col gap-4 rounded-3xl border border-line/70 bg-white/80 p-5 shadow-panel backdrop-blur md:flex-row md:items-end md:justify-between"
+        >
+          <div>
+            <p class="text-sm uppercase tracking-[0.3em] text-accent">
+              Dataset Grounded Chat
+            </p>
+            <h1 class="mt-2 text-3xl font-semibold">
+              Commerce RAG Test Console
+            </h1>
+            <p class="mt-2 max-w-2xl text-sm text-slate-600">
+              Multi-turn chat UI for your FastAPI `/ask` endpoint with shared
+              session memory.
+            </p>
+          </div>
+          <div class="grid gap-3 md:grid-cols-2">
+            <label class="block text-sm">
+              <span class="mb-1 block font-medium">API Base URL</span>
+              <input
+                id="apiBase"
+                class="w-full rounded-2xl border border-line bg-white px-4 py-3 outline-none transition focus:border-accent"
+                value="http://127.0.0.1:8000"
+              />
+            </label>
+            <label class="block text-sm">
+              <span class="mb-1 block font-medium">Session ID</span>
+              <input
+                id="sessionId"
+                class="w-full rounded-2xl border border-line bg-white px-4 py-3 outline-none transition focus:border-accent"
+              />
+            </label>
+          </div>
+        </header>
+
+        <main class="grid flex-1 gap-6 lg:grid-cols-[1.7fr_0.9fr]">
+          <section
+            class="col-span-2 rounded-3xl border border-line/70 bg-white/85 p-5 shadow-panel"
+          >
+            <h2 class="text-lg font-semibold">Last Response</h2>
+            <dl class="mt-4 flex space-x-3 text-sm">
+              <div>
+                <dt class="font-medium text-slate-500">Status</dt>
+                <dd id="respStatus" class="mt-1">-</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-slate-500">Source</dt>
+                <dd id="respSource" class="mt-1">-</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-slate-500">Intent</dt>
+                <dd id="respIntent" class="mt-1">-</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-slate-500">Response Time</dt>
+                <dd id="respTime" class="mt-1">-</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-slate-500">API Time</dt>
+                <dd id="respApiTime" class="mt-1">-</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-slate-500">Groq Time</dt>
+                <dd id="respGroqTime" class="mt-1">-</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-slate-500">Product</dt>
+                <dd id="respProduct" class="mt-1">-</dd>
+              </div>
+              <div>
+                <dt class="font-medium text-slate-500">Category</dt>
+                <dd id="respCategory" class="mt-1">-</dd>
+              </div>
+            </dl>
+          </section>
+          <section
+            class="flex min-h-[70vh] flex-col rounded-3xl border border-line/70 bg-white/85 shadow-panel"
+          >
+            <div class="border-b border-line/70 px-5 py-4">
+              <h2 class="text-lg font-semibold">Chat</h2>
+              <p class="mt-1 text-sm text-slate-500">
+                Ask about prices, availability, cheapest item, or follow-up
+                questions.
+              </p>
+            </div>
+
+            <div
+              id="messages"
+              class="flex-1 space-y-4 max-h-80 overflow-y-auto px-5 py-5"
+            ></div>
+
+            <div class="border-t border-line/70 p-4">
+              <form id="chatForm" class="flex flex-col gap-3 md:flex-row">
+                <input
+                  id="messageInput"
+                  class="flex-1 rounded-2xl border border-line bg-white px-4 py-3 text-base outline-none transition focus:border-accent"
+                  placeholder="Type your question..."
+                  autocomplete="off"
+                />
+                <button
+                  id="sendButton"
+                  type="submit"
+                  class="rounded-2xl bg-ink px-6 py-3 font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Send
+                </button>
+              </form>
+            </div>
+          </section>
+
+          <aside class="space-y-6">
+            <section
+              class="rounded-3xl border border-line/70 bg-white/85 p-5 shadow-panel"
+            >
+              <h2 class="text-lg font-semibold">Quick Prompts</h2>
+              <div class="mt-4 grid gap-3">
+                <button
+                  class="quick rounded-2xl border border-line px-4 py-3 text-left text-sm hover:border-accent hover:bg-accentSoft/40"
+                  data-query="Do you have noodles?"
+                >
+                  Do you have noodles?
+                </button>
+                <button
+                  class="quick rounded-2xl border border-line px-4 py-3 text-left text-sm hover:border-accent hover:bg-accentSoft/40"
+                  data-query="What noodles do you have?"
+                >
+                  What noodles do you have?
+                </button>
+                <button
+                  class="quick rounded-2xl border border-line px-4 py-3 text-left text-sm hover:border-accent hover:bg-accentSoft/40"
+                  data-query="How much?"
+                >
+                  How much?
+                </button>
+                <button
+                  class="quick rounded-2xl border border-line px-4 py-3 text-left text-sm hover:border-accent hover:bg-accentSoft/40"
+                  data-query="What products do you sell?"
+                >
+                  What products do you sell?
+                </button>
+                <button
+                  class="quick rounded-2xl border border-line px-4 py-3 text-left text-sm hover:border-accent hover:bg-accentSoft/40"
+                  data-query="What is the cheapest product?"
+                >
+                  What is the cheapest product?
+                </button>
+                <button
+                  class="quick rounded-2xl border border-line px-4 py-3 text-left text-sm hover:border-accent hover:bg-accentSoft/40"
+                  data-query="What is the highest price product?"
+                >
+                  What is the highest price product?
+                </button>
+              </div>
+            </section>
+          </aside>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const messagesEl = document.getElementById("messages");
+      const formEl = document.getElementById("chatForm");
+      const inputEl = document.getElementById("messageInput");
+      const sendButtonEl = document.getElementById("sendButton");
+      const apiBaseEl = document.getElementById("apiBase");
+      const sessionIdEl = document.getElementById("sessionId");
+
+      const statusEl = document.getElementById("respStatus");
+      const sourceEl = document.getElementById("respSource");
+      const intentEl = document.getElementById("respIntent");
+      const timeEl = document.getElementById("respTime");
+      const apiTimeEl = document.getElementById("respApiTime");
+      const groqTimeEl = document.getElementById("respGroqTime");
+      const productEl = document.getElementById("respProduct");
+      const categoryEl = document.getElementById("respCategory");
+
+      function makeSessionId() {
+        return "session-" + Math.random().toString(36).slice(2, 10);
+      }
+
+      function escapeHtml(text) {
+        return text
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function addMessage(role, text, meta = "") {
+        const wrapper = document.createElement("div");
+        wrapper.className =
+          role === "user" ? "flex justify-end" : "flex justify-start";
+
+        const bubble = document.createElement("div");
+        bubble.className =
+          role === "user"
+            ? "max-w-[85%] rounded-[24px] rounded-br-md bg-ink px-4 py-3 text-white"
+            : "max-w-[85%] rounded-[24px] rounded-bl-md border border-line bg-stone-50 px-4 py-3 text-ink";
+
+        bubble.innerHTML = `
+          <div class="whitespace-pre-wrap text-sm leading-6">${escapeHtml(text)}</div>
+          ${meta ? `<div class="mt-2 text-xs ${role === "user" ? "text-slate-200" : "text-slate-500"}">${escapeHtml(meta)}</div>` : ""}
+        `;
+
+        wrapper.appendChild(bubble);
+        messagesEl.appendChild(wrapper);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      function setLoading(isLoading) {
+        sendButtonEl.disabled = isLoading;
+        sendButtonEl.textContent = isLoading ? "Sending..." : "Send";
+      }
+
+      function updateInspector(payload, elapsedMs) {
+        statusEl.textContent = payload.status || "-";
+        sourceEl.textContent = payload.source || "-";
+        intentEl.textContent = payload.resolved?.intent || "-";
+        timeEl.textContent = Number.isFinite(elapsedMs)
+          ? `${elapsedMs.toFixed(1)} ms`
+          : "-";
+        apiTimeEl.textContent =
+          typeof payload.api_time_ms === "number"
+            ? `${payload.api_time_ms.toFixed(1)} ms`
+            : "-";
+        groqTimeEl.textContent =
+          typeof payload.groq_time_ms === "number"
+            ? `${payload.groq_time_ms.toFixed(1)} ms`
+            : "-";
+        productEl.textContent = payload.resolved?.product || "-";
+        categoryEl.textContent = payload.resolved?.category || "-";
+      }
+
+      async function sendMessage(message) {
+        const apiBase = apiBaseEl.value.trim().replace(/\/+$/, "");
+        const sessionId = sessionIdEl.value.trim();
+
+        if (!message || !apiBase || !sessionId) {
+          return;
+        }
+
+        addMessage("user", message, sessionId);
+        setLoading(true);
+
+        try {
+          const url = new URL(apiBase + "/ask");
+          url.searchParams.set("query", message);
+          url.searchParams.set("session_id", sessionId);
+
+          const startedAt = performance.now();
+          const response = await fetch(url.toString());
+          const elapsedMs = performance.now() - startedAt;
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const payload = await response.json();
+          updateInspector(payload, elapsedMs);
+          addMessage(
+            "assistant",
+            payload.answer || "No answer returned.",
+            `status: ${payload.status || "-"} | source: ${payload.source || "-"} | browser: ${elapsedMs.toFixed(1)} ms | api: ${typeof payload.api_time_ms === "number" ? payload.api_time_ms.toFixed(1) : "-"} ms | groq: ${typeof payload.groq_time_ms === "number" ? payload.groq_time_ms.toFixed(1) : "-"} ms`,
+          );
+        } catch (error) {
+          timeEl.textContent = "-";
+          apiTimeEl.textContent = "-";
+          groqTimeEl.textContent = "-";
+          addMessage(
+            "assistant",
+            `Request failed: ${error.message}`,
+            "Check API URL, CORS, or server status.",
+          );
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      formEl.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const message = inputEl.value.trim();
+        if (!message) return;
+        inputEl.value = "";
+        await sendMessage(message);
+      });
+
+      document.querySelectorAll(".quick").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const message = button.dataset.query || "";
+          await sendMessage(message);
+        });
+      });
+
+      sessionIdEl.value = makeSessionId();
+      addMessage(
+        "assistant",
+        "Chat UI ready. Start with a product or category question, then try a follow-up like 'How much?'",
+        "Connect this page to your FastAPI server.",
+      );
+    </script>
+  </body>
+</html>

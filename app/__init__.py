@@ -1,0 +1,1 @@
+"""Commerce RAG assistant package."""
