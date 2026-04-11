@@ -1,0 +1,7 @@
+- [x] Update README.md with project purpose and strategies
+- [x] Create PROJECT_ARCHITECTURE.md with core flows and logic
+    - [x] Add Mermaid flow diagrams
+    - [x] Document Resolve Logic (Intent/Entities)
+    - [x] Document Session State Inheritance
+    - [x] Document Caching Strategies
+- [x] Link documentation in README.md
