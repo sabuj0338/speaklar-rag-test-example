@@ -114,3 +114,8 @@ class FaissSemanticCache:
         faiss.write_index(self.index, str(self.index_path))
         with open(self.map_path, "w", encoding="utf-8") as f:
             json.dump(self.id_map, f, ensure_ascii=False, indent=2)
+
+    def clear(self) -> None:
+        self.index.reset()
+        self.id_map.clear()
+        self.save()

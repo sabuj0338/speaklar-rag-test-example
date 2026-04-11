@@ -53,6 +53,7 @@ async def lifespan(app: FastAPI):
     try:
         redis_client = Redis.from_url(settings.redis_url, decode_responses=True)
         redis_client.ping()
+        redis_client.flushdb()  # Clear redis caches on startup
     except RedisError:
         redis_client = None
 
@@ -70,6 +71,7 @@ async def lifespan(app: FastAPI):
         embedder=model,
         cache_dir=settings.faiss_index_path.parent / "semantic_cache"
     )
+    app.state.semantic_cache.clear()  # Clear semantic cache on startup
 
     yield
 

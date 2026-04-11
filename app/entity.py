@@ -10,6 +10,7 @@ from app.catalog import normalize_text
 
 BANGLA_CATEGORY_MAP = {
     "নুডলস": "noodles",
+    "নুডুলস": "noodles",
     "লবণ": "salt",
     "ড্রেস": "dress",
 }
