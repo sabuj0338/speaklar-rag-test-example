@@ -60,7 +60,8 @@ def build_answer(
 
     if intent == "list_all_products":
         names = _unique_names(results, limit=5)
-        updated_state = {**state, "active_products": names}
+        updated_state = {k: v for k, v in state.items() if k != "active_product" and k != "active_category"}
+        updated_state["active_products"] = names
         return AskResponse(
             answer=f"We sell: {', '.join(names)}.",
             status="found",
@@ -72,7 +73,8 @@ def build_answer(
 
     if intent == "category_availability":
         names = _unique_names(filtered, limit=3)
-        updated_state = {**state, "active_category": category, "active_products": names}
+        updated_state = {k: v for k, v in state.items() if k != "active_product"}
+        updated_state.update({"active_category": category, "active_products": names})
         if len(names) == 1:
             updated_state["active_product"] = names[0]
         return AskResponse(
@@ -86,7 +88,8 @@ def build_answer(
 
     if intent == "list_category_products":
         names = _unique_names(filtered, limit=5)
-        updated_state = {**state, "active_category": category, "active_products": names}
+        updated_state = {k: v for k, v in state.items() if k != "active_product"}
+        updated_state.update({"active_category": category, "active_products": names})
         if len(names) == 1:
             updated_state["active_product"] = names[0]
         return AskResponse(

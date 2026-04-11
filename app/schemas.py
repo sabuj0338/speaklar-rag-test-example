@@ -25,7 +25,7 @@ class ResolvedQuery(BaseModel):
 class AskResponse(BaseModel):
     answer: str
     status: Literal["found", "ambiguous", "missing", "unavailable", "fallback"]
-    source: Literal["exact_cache", "retriever", "llm_fallback", "clarification"]
+    source: Literal["exact_cache", "retriever", "llm_fallback", "clarification", "semantic_cache"]
     resolved: ResolvedQuery
     api_time_ms: float = 0.0
     groq_time_ms: float = 0.0

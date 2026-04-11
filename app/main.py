@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from redis import Redis
 from redis.exceptions import RedisError
 
-from app.cache import InMemoryCacheStore, RedisCacheStore
+from app.cache import InMemoryCacheStore, RedisCacheStore, FaissSemanticCache
 from app.catalog import load_json, normalize_text
 from app.config import get_settings
 from app.embeddings import ensure_embedder_dimensions, load_embedder
@@ -66,6 +66,10 @@ async def lifespan(app: FastAPI):
     app.state.state_store = RedisStateStore(redis_client) if redis_client else InMemoryStateStore()
     app.state.cache_store = RedisCacheStore(redis_client) if redis_client else InMemoryCacheStore()
     app.state.llm_fallback = GroqFallback(settings.groq_api_key, settings.groq_model)
+    app.state.semantic_cache = FaissSemanticCache(
+        embedder=model,
+        cache_dir=settings.faiss_index_path.parent / "semantic_cache"
+    )
 
     yield
 

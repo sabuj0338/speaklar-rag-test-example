@@ -32,13 +32,19 @@ class EntityResolver:
             for token in set(normalized.split()):
                 self.token_index.setdefault(token, set()).add(product_name)
 
-    def extract_product(self, query: str, threshold: int = 72) -> str | None:
+    def extract_product(self, query: str, threshold: int = 85) -> str | None:
         if not self.product_names:
             return None
 
         normalized_query = normalize_text(query)
-        cleaned_query = re.sub(r"\b(do you have|how much is|how much|what is|what's|is there|available|price of|price|have)\b", " ", normalized_query)
+        cleaned_query = re.sub(r"\b(do you have|how much is|how much|which one|which|what is|what's|is there|available|price of|price|have)\b", " ", normalized_query)
         cleaned_query = " ".join(cleaned_query.split())
+        stripped_query = re.sub(r"[^\w\s]", "", cleaned_query).strip()
+
+        # Vague anaphora like 'it', 'this one', etc. shouldn't trigger product search
+        from app.resolver import VAGUE_REFERENCES
+        if stripped_query in VAGUE_REFERENCES or len(stripped_query) <= 2:
+            return None
 
         if cleaned_query in self.normalized_name_map:
             return self.normalized_name_map[cleaned_query]
@@ -66,7 +72,7 @@ class EntityResolver:
             match = process.extractOne(
                 cleaned_query or normalized_query,
                 top_candidates,
-                scorer=fuzz.WRatio,
+                scorer=fuzz.token_set_ratio,
                 processor=normalize_text,
             )
             if match and match[1] >= threshold:
@@ -75,7 +81,7 @@ class EntityResolver:
         match = process.extractOne(
             cleaned_query or normalized_query,
             self.product_names,
-            scorer=fuzz.WRatio,
+            scorer=fuzz.token_set_ratio,
             processor=normalize_text,
         )
         if match and match[1] >= threshold:
@@ -91,4 +97,18 @@ class EntityResolver:
             category_pattern = r"\b" + re.escape(normalize_text(category)) + r"\b"
             if re.search(category_pattern, normalized):
                 return category
+                
+        query_tokens = normalized.split()
+        for raw_token in query_tokens:
+            token = re.sub(r"[^\w\s]", "", raw_token)
+            if not token:
+                continue
+            match = process.extractOne(
+                token,
+                self.categories,
+                scorer=fuzz.ratio,
+                processor=normalize_text,
+            )
+            if match and match[1] >= 90:
+                return match[0]
         return None

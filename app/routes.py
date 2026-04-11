@@ -1,38 +1,14 @@
 from time import perf_counter
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
 
 from app.answer_engine import build_answer
 from app.catalog import normalize_text
 from app.cache import make_cache_key
-from app.resolver import resolve_query
+from app.resolver import resolve_query, is_vague_reference
 from app.schemas import AskResponse
 
 router = APIRouter()
-
-VAGUE_REFERENCES = {
-    "it",
-    "this",
-    "that",
-    "this one",
-    "that one",
-    "how much",
-    "price",
-    "eta",
-    "ota",
-    "etar",
-    "otar",
-    "এটা",
-    "ওটা",
-    "এটার",
-    "ওটার",
-}
-
-
-def is_vague_reference(query: str) -> bool:
-    normalized = " ".join(query.lower().split())
-    return any(token in normalized for token in VAGUE_REFERENCES)
-
 
 @router.get("/health")
 def health() -> dict[str, str]:
@@ -40,7 +16,12 @@ def health() -> dict[str, str]:
 
 
 @router.get("/ask", response_model=AskResponse)
-def ask(request: Request, query: str, session_id: str) -> AskResponse:
+def ask(
+    request: Request,
+    query: str,
+    session_id: str,
+    background_tasks: BackgroundTasks
+) -> AskResponse:
     started_at = perf_counter()
     settings = request.app.state.settings
     retriever = request.app.state.retriever
@@ -66,7 +47,7 @@ def ask(request: Request, query: str, session_id: str) -> AskResponse:
         return cached_response
 
     if resolved.intent == "availability_product" and not resolved.product and not resolved.category:
-        if is_vague_reference(query) or state.get("active_product") or state.get("active_category"):
+        if is_vague_reference(query):
             response = AskResponse(
                 answer="Which product are you asking about? Please tell me the product name again.",
                 status="ambiguous",
@@ -124,6 +105,16 @@ def ask(request: Request, query: str, session_id: str) -> AskResponse:
         cache_store.set(cache_key, answer.model_dump(), ttl)
         return answer
 
+    semantic_cache = request.app.state.semantic_cache
+    semantic_hit = semantic_cache.search(query)
+    if semantic_hit:
+        semantic_response = AskResponse.model_validate(semantic_hit)
+        semantic_response.api_time_ms = (perf_counter() - started_at) * 1000
+        semantic_response.resolver_time_ms = resolver_time_ms
+        state_store.set_state(session_id, semantic_response.state)
+        cache_store.set(cache_key, semantic_response.model_dump(), settings.cache_ttl_seconds)
+        return semantic_response
+
     llm_text, groq_time_ms = llm_fallback.answer(query, results[:3])
     response = AskResponse(
         answer=llm_text or "I don't know.",
@@ -138,4 +129,8 @@ def ask(request: Request, query: str, session_id: str) -> AskResponse:
     )
     response.api_time_ms = (perf_counter() - started_at) * 1000
     cache_store.set(cache_key, response.model_dump(), settings.negative_cache_ttl_seconds)
+    
+    semantic_cache.add(query, response.model_dump())
+    background_tasks.add_task(semantic_cache.save)
+
     return response
