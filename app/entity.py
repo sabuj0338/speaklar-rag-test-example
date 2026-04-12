@@ -38,7 +38,7 @@ class EntityResolver:
             return None
 
         normalized_query = normalize_text(query)
-        cleaned_query = re.sub(r"\b(do you have|how much is|how much|which one|which|what is|what's|is there|available|price of|price|have)\b", " ", normalized_query)
+        cleaned_query = re.sub(r"\b(do you have|how much is|how much|which one|which|what is|what's|is there|available|price of|price|have|কি|আছে|পাওয়া যায়|পাওয়া যায়|পাওয়া|পাওয়া|যায়|যায়|টা|টি)\b", " ", normalized_query)
         cleaned_query = " ".join(cleaned_query.split())
         stripped_query = re.sub(r"[^\w\s]", "", cleaned_query).strip()
 

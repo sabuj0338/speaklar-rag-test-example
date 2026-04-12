@@ -49,7 +49,7 @@ def ask(
     if resolved.intent == "availability_product" and not resolved.product and not resolved.category:
         if is_vague_reference(query):
             response = AskResponse(
-                answer="Which product are you asking about? Please tell me the product name again.",
+                answer="আপনি কোন পণ্যটি সম্পর্কে জানতে চাইছেন? অনুগ্রহ করে পণ্যের নাম আবার বলুন। (Which product are you asking about? Please name it again.)",
                 status="ambiguous",
                 source="clarification",
                 resolved=resolved,
@@ -61,7 +61,7 @@ def ask(
             )
         else:
             response = AskResponse(
-                answer="No, I don't have that product in the catalog.",
+                answer="দুঃখিত, আমাদের ক্যাটালগে এই পণ্যটি নেই। (Sorry, I don't have that product in the catalog.)",
                 status="missing",
                 source="retriever",
                 resolved=resolved,
@@ -117,7 +117,7 @@ def ask(
 
     llm_text, groq_time_ms = llm_fallback.answer(query, results[:3])
     response = AskResponse(
-        answer=llm_text or "I don't know.",
+        answer=llm_text or "If the answer is not supported by the context, say 'দুঃখিত, আমাদের তালিকায় এটি নেই।' (Sorry, it's not in our list)\n\n",
         status="fallback",
         source="llm_fallback",
         resolved=resolved,

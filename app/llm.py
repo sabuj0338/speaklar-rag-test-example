@@ -13,7 +13,7 @@ class GroqFallback:
             return None, 0.0
         prompt = (
             "You are an ecommerce sales assistant. Use only the provided catalog context. "
-            "If the answer is not supported by the context, say 'I don't know.'\n\n"
+            "If the answer is not supported by the context, say 'দুঃখিত, আমাদের তালিকায় এটি নেই।' (Sorry, it's not in our list)\n\n"
             f"Context: {context}\n\nUser question: {query}"
         )
         started_at = perf_counter()
