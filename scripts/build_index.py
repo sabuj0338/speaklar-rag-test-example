@@ -21,7 +21,15 @@ def main() -> None:
         products = json.load(file)
 
     embedder, embedder_name = load_embedder(settings.embedding_model)
-    texts = [f"{item['text']} {item.get('category', '')} {item.get('metadata', '')}" for item in products]
+
+    # Use full_text for Knowledge_Bank data, fall back to text+category+metadata for legacy data
+    texts = []
+    for item in products:
+        if "full_text" in item:
+            texts.append(item["full_text"])
+        else:
+            texts.append(f"{item['text']} {item.get('category', '')} {item.get('metadata', '')}")
+
     embeddings = embedder.encode(texts)
     vectors = np.array(embeddings, dtype="float32")
 
@@ -34,7 +42,7 @@ def main() -> None:
         json.dump(id_map, file, ensure_ascii=False, indent=2)
 
     print(
-        f"Built index with {len(products)} products at {settings.faiss_index_path} using {embedder_name} embeddings"
+        f"✅ Built index with {len(products)} products at {settings.faiss_index_path} using {embedder_name} embeddings"
     )
 
 

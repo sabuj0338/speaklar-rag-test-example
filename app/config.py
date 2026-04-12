@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "Commerce RAG Assistant"
+    app_name: str = "বাংলা RAG সহকারী"
     redis_url: str = "redis://localhost:6379/0"
     groq_api_key: str | None = None
     groq_model: str = "llama-3.1-8b-instant"
@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     top_k: int = 8
     cache_ttl_seconds: int = 300
     negative_cache_ttl_seconds: int = 60
-    products_path: Path = Path("data/products.json")
+    products_path: Path = Path("data/knowledge_bank.json")
     faiss_index_path: Path = Path("artifacts/index.faiss")
     product_map_path: Path = Path("artifacts/id_map.json")
 

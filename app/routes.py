@@ -39,17 +39,18 @@ def ask(
     resolver_time_ms = (perf_counter() - resolver_started_at) * 1000
     cache_key = make_cache_key(session_id, resolved.intent, resolved.product, resolved.category)
 
-    cached = cache_store.get(cache_key)
-    if cached:
-        cached_response = AskResponse.model_validate(cached)
-        cached_response.api_time_ms = (perf_counter() - started_at) * 1000
-        cached_response.resolver_time_ms = resolver_time_ms
-        return cached_response
+    # Bypass exact-match cache retrieving so state mutation logic executes linearly
+    # cached = cache_store.get(cache_key)
+    # if cached:
+    #     cached_response = AskResponse.model_validate(cached)
+    #     cached_response.api_time_ms = (perf_counter() - started_at) * 1000
+    #     cached_response.resolver_time_ms = resolver_time_ms
+    #     return cached_response
 
     if resolved.intent == "availability_product" and not resolved.product and not resolved.category:
         if is_vague_reference(query):
             response = AskResponse(
-                answer="আপনি কোন পণ্যটি সম্পর্কে জানতে চাইছেন? অনুগ্রহ করে পণ্যের নাম আবার বলুন। (Which product are you asking about? Please name it again.)",
+                answer="আপনি কোন পণ্যটি সম্পর্কে জানতে চাইছেন? অনুগ্রহ করে পণ্যের নাম আবার বলুন।",
                 status="ambiguous",
                 source="clarification",
                 resolved=resolved,
@@ -61,7 +62,7 @@ def ask(
             )
         else:
             response = AskResponse(
-                answer="দুঃখিত, আমাদের ক্যাটালগে এই পণ্যটি নেই। (Sorry, I don't have that product in the catalog.)",
+                answer="দুঃখিত, আমাদের ক্যাটালগে এই পণ্যটি নেই।",
                 status="missing",
                 source="retriever",
                 resolved=resolved,
@@ -111,13 +112,13 @@ def ask(
         semantic_response = AskResponse.model_validate(semantic_hit)
         semantic_response.api_time_ms = (perf_counter() - started_at) * 1000
         semantic_response.resolver_time_ms = resolver_time_ms
-        state_store.set_state(session_id, semantic_response.state)
+        semantic_response.state = state # PRESERVE user state (do not leak cached state)
         cache_store.set(cache_key, semantic_response.model_dump(), settings.cache_ttl_seconds)
         return semantic_response
 
     llm_text, groq_time_ms = llm_fallback.answer(query, results[:3])
     response = AskResponse(
-        answer=llm_text or "If the answer is not supported by the context, say 'দুঃখিত, আমাদের তালিকায় এটি নেই।' (Sorry, it's not in our list)\n\n",
+        answer=llm_text or "দুঃখিত, আমাদের তালিকায় এটি নেই।",
         status="fallback",
         source="llm_fallback",
         resolved=resolved,

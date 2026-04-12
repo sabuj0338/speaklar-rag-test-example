@@ -29,13 +29,22 @@ VAGUE_REFERENCES = {
     "কত",
     "কত টাকা",
     "প্রাইস",
+    "মূল্য",
+    "এইটা",
+    "সেইটা",
+    "এইটার",
+    "সেইটার",
 }
 
 
 def is_vague_reference(query: str) -> bool:
     normalized = " ".join(query.lower().split())
-    for token in VAGUE_REFERENCES:
-        if re.search(r'\b' + re.escape(token) + r'\b', normalized):
+    cleaned = re.sub(r'[?,.!।]', '', normalized)
+    tokens = cleaned.split()
+    from app.entity import strip_bangla_suffixes
+    for token in tokens:
+        base_token = strip_bangla_suffixes(token)
+        if token in VAGUE_REFERENCES or base_token in VAGUE_REFERENCES:
             return True
     return False
 
@@ -65,8 +74,17 @@ def resolve_query(query: str, state: dict, entity_resolver: EntityResolver) -> R
         confidence = 0.95 if category else 0.45
         return ResolvedQuery(intent=intent, product=None, category=category, confidence=confidence)
 
+    # For availability & price intents, try both entity and category
     category = entity_resolver.detect_category(query)
     product = entity_resolver.extract_product(query)
+
+    # If we found a category but not a product, re-map intent
+    if category and not product:
+        if intent == "availability_product":
+            intent = "category_availability"
+        elif intent == "price_product":
+            # Keep price_product but with category context
+            pass
 
     if not product and vague:
         if state.get("active_product"):

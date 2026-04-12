@@ -32,15 +32,18 @@ async def lifespan(app: FastAPI):
 
     id_map = load_json(settings.product_map_path)
     catalog = list(id_map.values())
-    product_names = [item["text"] for item in id_map.values()]
-    categories = sorted({item.get("category", "") for item in id_map.values() if item.get("category")})
+    product_names = [item["text"] for item in catalog]
+    categories = sorted({item.get("category", "") for item in catalog if item.get("category")})
+
     category_products: dict[str, list[dict]] = {}
     product_lookup: dict[str, dict] = {}
     for item in catalog:
+        # Build category → products index
         category = item.get("category")
-        if not category:
-            continue
-        category_products.setdefault(normalize_text(category), []).append(item)
+        if category:
+            category_products.setdefault(normalize_text(category), []).append(item)
+
+        # Build normalized product name → product lookup
         product_lookup[normalize_text(item["text"])] = item
 
     index = faiss.read_index(str(settings.faiss_index_path))

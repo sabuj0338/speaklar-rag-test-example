@@ -1,1 +1,30 @@
-{}
+{
+  "0": {
+    "answer": "আমার তালিকায় এই ধরনের পণ্য নেই।",
+    "status": "fallback",
+    "source": "llm_fallback",
+    "resolved": {
+      "intent": "unknown",
+      "product": null,
+      "category": null,
+      "confidence": 0.45
+    },
+    "api_time_ms": 1763.0689580109902,
+    "groq_time_ms": 970.1789999962784,
+    "resolver_time_ms": 9.97087499126792,
+    "state": {
+      "active_products": [
+        "নরম কটন তোয়ালে",
+        "নেইল পলিশ",
+        "গ্লাস শো-কেস",
+        "মচমচে চানাচুর, বিভিন্ন স্বাদে পাওয়া যায়",
+        "সায়েন্টিফিক ক্যালকুলেটর"
+      ]
+    },
+    "matched_products": [
+      "আরামদায়ক জুতা",
+      "কুশন সোফা",
+      "এনালগ ও ডিজিটাল ঘড়ি"
+    ]
+  }
+}
