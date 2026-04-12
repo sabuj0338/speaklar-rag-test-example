@@ -39,12 +39,19 @@ pip install -r requirements.txt
 ```
 
 ### 2. Configuration
-Copy the template and add your credentials:
+
+Copy the template and configure your connection strings:
+
 ```bash
 cp .env.example .env
 ```
-> [!NOTE]
-> Update `.env` with your `GROQ_API_KEY` if you intend to use the AI fallback logic.
+
+Open `.env` and set the following:
+- **Redis**: Ensure `REDIS_URL` points to your running Redis instance (default: `redis://localhost:6379/0`). This is required for session management and caching.
+- **Groq**: Add your `GROQ_API_KEY`. The system uses Groq for high-performance AI fallbacks when deterministic logic isn't sufficient.
+
+> [!IMPORTANT]
+> A running Redis server and a valid Groq API key are required for the application to function correctly.
 
 ---
 
