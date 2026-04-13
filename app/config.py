@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     groq_api_key: str | None = None
     groq_model: str = "llama-3.1-8b-instant"
+    groq_router_model: str = "llama-3.1-8b-instant"  # Model used for LLM Router
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     top_k: int = 8
     cache_ttl_seconds: int = 300

@@ -10,9 +10,9 @@ from app.cache import InMemoryCacheStore, RedisCacheStore, FaissSemanticCache
 from app.catalog import load_json, normalize_text
 from app.config import get_settings
 from app.embeddings import ensure_embedder_dimensions, load_embedder
-from app.entity import EntityResolver
 from app.llm import GroqFallback
 from app.retriever import Retriever
+from app.router import LLMRouter
 from app.routes import router
 from app.state import InMemoryStateStore, RedisStateStore
 
@@ -32,8 +32,6 @@ async def lifespan(app: FastAPI):
 
     id_map = load_json(settings.product_map_path)
     catalog = list(id_map.values())
-    product_names = [item["text"] for item in catalog]
-    categories = sorted({item.get("category", "") for item in catalog if item.get("category")})
 
     category_products: dict[str, list[dict]] = {}
     product_lookup: dict[str, dict] = {}
@@ -66,7 +64,7 @@ async def lifespan(app: FastAPI):
     app.state.category_products = category_products
     app.state.product_lookup = product_lookup
     app.state.embedder_name = embedder_name
-    app.state.entity_resolver = EntityResolver(product_names=product_names, categories=categories)
+    app.state.llm_router = LLMRouter(settings.groq_api_key, settings.groq_router_model)
     app.state.state_store = RedisStateStore(redis_client) if redis_client else InMemoryStateStore()
     app.state.cache_store = RedisCacheStore(redis_client) if redis_client else InMemoryCacheStore()
     app.state.llm_fallback = GroqFallback(settings.groq_api_key, settings.groq_model)

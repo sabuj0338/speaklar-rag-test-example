@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.catalog import normalize_text, parse_price
-from app.schemas import AskResponse, ResolvedQuery
+from app.schemas import AskResponse, RouterResult
 
 
 import random
@@ -58,7 +58,7 @@ def _format_price(price: Any) -> str:
 
 
 def build_answer(
-    resolved: ResolvedQuery,
+    resolved: RouterResult,
     results: list[dict[str, Any]],
     state: dict[str, Any],
 ) -> AskResponse | None:
@@ -114,6 +114,8 @@ def build_answer(
         )
 
     if intent == "price_min":
+        if not results:
+            return None
         item = min(results, key=lambda value: parse_price(value["price"]))
         updated_state = {**state, "active_product": item["text"], "active_category": item.get("category")}
         return AskResponse(
@@ -126,6 +128,8 @@ def build_answer(
         )
 
     if intent == "price_max":
+        if not results:
+            return None
         item = max(results, key=lambda value: parse_price(value["price"]))
         updated_state = {**state, "active_product": item["text"], "active_category": item.get("category")}
         return AskResponse(
@@ -212,4 +216,6 @@ def build_answer(
             matched_products=[item["text"]],
         )
 
+    # For product_search, recommendation, comparison, product_detail — return None to trigger LLM fallback
+    # These complex intents are best handled by the LLM answer generator
     return None
