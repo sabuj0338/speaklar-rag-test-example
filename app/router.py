@@ -26,35 +26,46 @@ INTENTS: list_all_products, category_availability, list_category_products, price
 CATEGORIES: ইলেকট্রনিক্স, আসবাবপত্র, খেলাধুলা, প্রসাধনী, ফ্যাশন ও পোশাক, খাদ্য ও পানীয়, স্বাস্থ্য ও ঔষধ, যন্ত্রপাতি ও সরঞ্জাম, গৃহস্থালী সামগ্রী, বই ও স্টেশনারি, খেলনা ও শিশু পণ্য, মোবাইল আনুষঙ্গিক, কৃষি ও বাগান, ডিজিটাল সেবা
 
 RULES:
-- Fix misspellings (চার্জারর→চার্জার, হেডফুন→হেডফোন)
-- Understand slang (জম্পেশ=good, ফাটাফাটি=excellent, বাজেট ফ্রেন্ডলি=cheap)
-- is_relevant=false ONLY for non-commerce queries (weather, politics etc)
-- Use conversation state for context (এটা, ওটা, আগেরটা = reference to active product)
-- If asked about ANY item, generic term, or English word (e.g. "শ্যাম্পু", "ল্যাপটপ", "salt"), MUST extract it as `product` and set intent to `availability_product` or `product_search`. Do NOT default to `list_all_products`. Do NOT assume it is a category unless explicitly a category name.
-- product: extracted product name or null
-- category: from valid list above or null
-- price_filter: min/max/budget/mid_range/under_X or null
+- Chain of Thought: ALWAYS generate "reasoning" FIRST. Briefly explain the connection between the query and the selected intent.
+- Context & Coreference: If the user says "এটা", "ওটা", "এটার", "আগেরটা" (this/that/it/its), you MUST extract the exact `active_product` from the provided STATE or CHAT HISTORY and set it as the `product`.
+- Intent mapping for Products: If asked about ANY specific item ("শ্যাম্পু", "ল্যাপটপ", "টি শার্ট"), extract it as `product`, and set intent to `availability_product`. NEVER use `list_all_products` or `list_category_products` for specific items.
+- Intent mapping for Pricing: If the query contains "দাম", "কত টাকা" or asks for price, MUST set intent to `price_product`.
+- Intent mapping for Categories: ONLY output `category` if the query literally contains the exact category text (e.g., query explicitly contains the string "ইলেকট্রনিক্স"). If the query instead asks for "ল্যাপটপ" or "টি শার্ট", DO NOT output `category`. You MUST output `product="ল্যাপটপ"`.
+- Intent mapping for Vague requests: For slang like "জম্পেশ", "ভালো কিছু", use `recommendation`.
+- Non-product relevance: Queries about "ডেলিভারি", "শিপিং", "পেমেন্ট" ARE highly relevant. Set `intent` to `unknown` and `is_relevant=true`. NEVER use `out_of_scope` for these.
+- EXACT SUBSTRING MATCHING: NEVER translate words into English! If the user says "ল্যাপটপ", extract exactly "ল্যাপটপ" as `product`, NOT "laptop".
+- Out of scope: Use `out_of_scope` ONLY for politics, weather, and completely irrelevant topics.
 
-Return ONLY valid JSON:
-{"intent":"...","product":null,"category":null,"price_filter":null,"is_relevant":true,"confidence":0.9,"reasoning":"brief"}"""
+JSON Structure MUST exactly be:
+{"reasoning":"Step-by-step logic... User said 'এটার', active_product is 'লবণ', so extracting 'লবণ'","intent":"...","product":null,"category":null,"price_filter":null,"is_relevant":true,"confidence":0.9}"""
 
 
 def _build_user_prompt(query: str, state: dict[str, Any]) -> str:
-    """Build the user prompt with query and conversation context."""
-    parts = [f"Q: {query}"]
+    """Build the user prompt with query and linear conversation history."""
+    parts = []
 
-    # Add conversation context if available
+    history = state.get("history", [])
+    if history:
+        parts.append("--- CHAT HISTORY ---")
+        for turn in history:
+            if "user" in turn:
+                parts.append(f"User: {turn['user']}")
+            if "assistant" in turn:
+                parts.append(f"Assistant: {turn['assistant']}")
+        parts.append("--------------------")
+
     ctx = []
     if state.get("active_product"):
-        ctx.append(f"product={state['active_product']}")
+        ctx.append(f"active_product='{state['active_product']}'")
     if state.get("active_category"):
-        ctx.append(f"category={state['active_category']}")
+        ctx.append(f"active_category='{state['active_category']}'")
     if state.get("active_products"):
-        ctx.append(f"shown=[{','.join(state['active_products'][:3])}]")
+        ctx.append(f"shown_products=[{','.join(state['active_products'][:3])}]")
 
     if ctx:
-        parts.append(f"State: {'; '.join(ctx)}")
+        parts.append(f"STATE: {', '.join(ctx)}")
 
+    parts.append(f"CURRENT QUERY: {query}")
     return "\n".join(parts)
 
 

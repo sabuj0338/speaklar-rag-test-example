@@ -35,8 +35,21 @@ def ask(
     # 1. Get conversation state
     state = state_store.get_state(session_id)
 
+    def _finalize_response(resp: AskResponse) -> AskResponse:
+        history = resp.state.get("history", [])
+        history.append({"user": query, "assistant": resp.answer})
+        resp.state["history"] = history[-6:]
+        state_store.set_state(session_id, resp.state)
+        return resp
+
     # 2. Route through LLM Router (replaces intent.py + entity.py + resolver.py)
     resolved, router_time_ms = llm_router.route(query, state)
+    
+    # Eagerly update context mappings so Fallback and subsequent vague queries don't lose context
+    if resolved.product:
+        state["active_product"] = resolved.product
+    if resolved.category:
+        state["active_category"] = resolved.category
 
     # 3. If query is out of scope, reject immediately
     if not resolved.is_relevant or resolved.intent == "out_of_scope":
@@ -52,7 +65,7 @@ def ask(
             state=state,
             matched_products=[],
         )
-        return response
+        return _finalize_response(response)
 
     # 4. Check cache
     cache_key = make_cache_key(session_id, resolved.intent, resolved.product, resolved.category)
@@ -92,10 +105,9 @@ def ask(
         answer.groq_time_ms = 0.0
         answer.router_time_ms = router_time_ms
         answer.total_groq_time_ms = router_time_ms
-        state_store.set_state(session_id, answer.state)
         ttl = settings.cache_ttl_seconds if answer.status == "found" else settings.negative_cache_ttl_seconds
         cache_store.set(cache_key, answer.model_dump(), ttl)
-        return answer
+        return _finalize_response(answer)
 
     # 7. Check semantic cache
     semantic_cache = request.app.state.semantic_cache
@@ -107,10 +119,16 @@ def ask(
         semantic_response.total_groq_time_ms = semantic_response.groq_time_ms + router_time_ms
         semantic_response.state = state  # PRESERVE user state (do not leak cached state)
         cache_store.set(cache_key, semantic_response.model_dump(), settings.cache_ttl_seconds)
-        return semantic_response
+        return _finalize_response(semantic_response)
 
     # 8. LLM Fallback for answer generation
     llm_text, groq_time_ms = llm_fallback.answer(query, results[:3])
+    # Update active product blindly based on the top vector match used in the fallback
+    if results:
+        state["active_product"] = results[0]["text"]
+        if "category" in results[0]:
+            state["active_category"] = results[0]["category"]
+
     response = AskResponse(
         answer=llm_text or "দুঃখিত, আমাদের তালিকায় এটি নেই।",
         status="fallback",
@@ -129,4 +147,4 @@ def ask(
     semantic_cache.add(query, response.model_dump())
     background_tasks.add_task(semantic_cache.save)
 
-    return response
+    return _finalize_response(response)

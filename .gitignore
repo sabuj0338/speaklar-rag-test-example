@@ -37,3 +37,5 @@ artifacts/
 *.txt
 !requirements.txt
 !.env.example
+
+artifacts/semantic_cache/*

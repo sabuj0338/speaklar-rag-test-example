@@ -22,7 +22,8 @@ class GroqFallback:
         prompt = (
             "তুমি একজন বাংলাদেশী ই-কমার্স সহকারী। শুধুমাত্র নিচের তথ্য থেকে বাংলায় উত্তর দাও। "
             "উত্তর সংক্ষিপ্ত ও সহায়ক হতে হবে। "
-            "যদি তথ্যে উত্তর না থাকে, বলো 'দুঃখিত, আমাদের তালিকায় এটি নেই।'\n\n"
+            "যদি ব্যবহারকারী পরামর্শ চায় (যেমন 'ভালো কিছু', 'ফাটাফাটি'), তবে নিচের তথ্য থেকে সেরা পণ্যগুলো সুপারিশ করো। "
+            "শুধুমাত্র যদি তথ্যের সাথে কোনোভাবেই কোনো মিল না থাকে, তবেই বলো 'দুঃখিত, আমাদের তালিকায় এটি নেই।'\n\n"
             f"তথ্য:\n{context_str}\n\n"
             f"প্রশ্ন: {query}"
         )
@@ -31,7 +32,7 @@ class GroqFallback:
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
-            max_completion_tokens=150,
+            max_completion_tokens=1024,
         )
         groq_time_ms = (perf_counter() - started_at) * 1000
         return completion.choices[0].message.content.strip(), groq_time_ms

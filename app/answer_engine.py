@@ -84,12 +84,19 @@ def build_answer(
     if intent == "category_availability":
         names = _unique_names(filtered, limit=3, randomize=True)
         updated_state = {k: v for k, v in state.items() if k != "active_product"}
-        updated_state.update({"active_category": category, "active_products": names})
+        
+        display_term = category or product or "এই"
+        if category:
+            updated_state.update({"active_category": category, "active_products": names})
+        else:
+            updated_state.update({"active_products": names})
+            
         if len(names) == 1:
             updated_state["active_product"] = names[0]
+            
         more_suffix = " এবং আরও অনেক কিছু" if len(filtered) > len(names) else ""
         return AskResponse(
-            answer=f"হ্যাঁ, আমাদের কাছে {category} আছে। এর মধ্যে রয়েছে: {', '.join(names)}{more_suffix}।" if names else f"দুঃখিত, এই মুহূর্তে আমি {category} সম্পর্কে নিশ্চিত করতে পারছি না।",
+            answer=f"হ্যাঁ, আমাদের কাছে {display_term} আছে। এর মধ্যে রয়েছে: {', '.join(names)}{more_suffix}।" if names else f"দুঃখিত, এই মুহূর্তে আমি {display_term} সম্পর্কে নিশ্চিত করতে পারছি না।",
             status="found" if names else "unavailable",
             source="retriever",
             resolved=resolved,
@@ -100,12 +107,19 @@ def build_answer(
     if intent == "list_category_products":
         names = _unique_names(filtered, limit=5, randomize=True)
         updated_state = {k: v for k, v in state.items() if k != "active_product"}
-        updated_state.update({"active_category": category, "active_products": names})
+        
+        display_term = category or product or "এই"
+        if category:
+            updated_state.update({"active_category": category, "active_products": names})
+        else:
+            updated_state.update({"active_products": names})
+            
         if len(names) == 1:
             updated_state["active_product"] = names[0]
+            
         more_suffix = " এবং আরও কিছু" if len(filtered) > len(names) else ""
         return AskResponse(
-            answer=f"আমাদের কাছে থাকা {category} পণ্য হলো: {', '.join(names)}{more_suffix}।" if names else f"দুঃখিত, আমি কোনো {category} পণ্য খুঁজে পাইনি।",
+            answer=f"আমাদের কাছে থাকা {display_term} পণ্য হলো: {', '.join(names)}{more_suffix}।" if names else f"দুঃখিত, আমি কোনো {display_term} পণ্য খুঁজে পাইনি।",
             status="found" if names else "missing",
             source="retriever",
             resolved=resolved,
