@@ -77,6 +77,22 @@ def ask(
         results = category_products.get(normalize_text(resolved.category), [])
     elif resolved.intent in {"price_min", "price_max"}:
         results = catalog
+    elif resolved.intent == "budget_search" and resolved.price_filter:
+        try:
+            from app.catalog import parse_price
+            budget = float(resolved.price_filter)
+            source_list = category_products.get(normalize_text(resolved.category), []) if resolved.category else catalog
+            matches = [p for p in source_list if parse_price(p["price"]) <= budget]
+            if resolved.product:
+                product_norm = normalize_text(resolved.product)
+                matches = [
+                    p for p in matches 
+                    if product_norm in normalize_text(p.get("text", "")) or product_norm in normalize_text(p.get("category", ""))
+                ]
+            matches = sorted(matches, key=lambda p: parse_price(p["price"]), reverse=True)
+            results = matches[:settings.top_k]
+        except ValueError:
+            results = catalog
     elif resolved.intent in {"category_availability", "list_category_products"} and resolved.category:
         results = category_products.get(normalize_text(resolved.category), [])
     elif resolved.intent in {"availability_product", "price_product"} and resolved.product:

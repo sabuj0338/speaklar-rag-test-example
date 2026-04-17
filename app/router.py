@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 # Compact system prompt — optimized for low token usage
 ROUTER_SYSTEM_PROMPT = """You are a query router for a Bangladeshi e-commerce chatbot. Analyze Bangla/English queries and return JSON.
 
-INTENTS: list_all_products, category_availability, list_category_products, price_min, price_max, availability_product, price_product, product_search, product_detail, recommendation, comparison, out_of_scope, unknown
+INTENTS: list_all_products, category_availability, list_category_products, price_min, price_max, availability_product, price_product, product_search, product_detail, recommendation, budget_search, comparison, out_of_scope, unknown
 
 CATEGORIES: ইলেকট্রনিক্স, আসবাবপত্র, খেলাধুলা, প্রসাধনী, ফ্যাশন ও পোশাক, খাদ্য ও পানীয়, স্বাস্থ্য ও ঔষধ, যন্ত্রপাতি ও সরঞ্জাম, গৃহস্থালী সামগ্রী, বই ও স্টেশনারি, খেলনা ও শিশু পণ্য, মোবাইল আনুষঙ্গিক, কৃষি ও বাগান, ডিজিটাল সেবা
 
@@ -30,6 +30,7 @@ RULES:
 - Context & Coreference: If the user says "এটা", "ওটা", "এটার", "আগেরটা" (this/that/it/its), you MUST extract the exact `active_product` from the provided STATE or CHAT HISTORY and set it as the `product`.
 - Intent mapping for Products: If asked about ANY specific item ("শ্যাম্পু", "ল্যাপটপ", "টি শার্ট"), extract it as `product`, and set intent to `availability_product`. NEVER use `list_all_products` or `list_category_products` for specific items.
 - Intent mapping for Pricing: If the query contains "দাম", "কত টাকা" or asks for price, MUST set intent to `price_product`.
+- Intent mapping for Budget: If the user explicitly asks for products under a certain price (e.g., "২০০ টাকার মধ্যে", "বাজেট ৫০০"), MUST set intent to `budget_search` AND extract the numeric amount as `price_filter` (e.g. `200`).
 - Intent mapping for Categories: ONLY output `category` if the query literally contains the exact category text (e.g., query explicitly contains the string "ইলেকট্রনিক্স"). If the query instead asks for "ল্যাপটপ" or "টি শার্ট", DO NOT output `category`. You MUST output `product="ল্যাপটপ"`.
 - Intent mapping for Vague requests: For slang like "জম্পেশ", "ভালো কিছু", use `recommendation`.
 - Non-product relevance: Queries about "ডেলিভারি", "শিপিং", "পেমেন্ট" ARE highly relevant. Set `intent` to `unknown` and `is_relevant=true`. NEVER use `out_of_scope` for these.

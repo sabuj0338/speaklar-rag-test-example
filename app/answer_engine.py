@@ -127,6 +127,38 @@ def build_answer(
             matched_products=names,
         )
 
+    if intent == "budget_search":
+        if not results:
+            budget_str = f"৳{parse_price(resolved.price_filter):,.2f}" if resolved.price_filter else "এই বাজেটের"
+            return AskResponse(
+                answer=f"দুঃখিত, {budget_str} মধ্যে আমি কোনো পণ্য খুঁজে পাইনি।",
+                status="missing",
+                source="retriever",
+                resolved=resolved,
+                state=state,
+            )
+        names = []
+        for p in results:
+            names.append(f"{p['text']} ({_format_price(p['price'])})")
+            
+        display_names = names[:5]
+        updated_state = {k: v for k, v in state.items() if k != "active_product"}
+        updated_state.update({"active_products": [p["text"] for p in results[:5]]})
+        if len(results) == 1:
+            updated_state["active_product"] = results[0]["text"]
+            
+        more_suffix = " এবং আরও কিছু" if len(results) > len(display_names) else ""
+        budget_str = f"৳{parse_price(resolved.price_filter):,.0f}" if resolved.price_filter else "এই বাজেটের"
+        
+        return AskResponse(
+            answer=f"আপনার {budget_str} বাজেটের মধ্যে পাওয়া সেরা পণ্যগুলো হলো: {', '.join(display_names)}{more_suffix}।",
+            status="found",
+            source="retriever",
+            resolved=resolved,
+            state=updated_state,
+            matched_products=[p["text"] for p in results[:5]],
+        )
+
     if intent == "price_min":
         if not results:
             return None

@@ -57,12 +57,12 @@ Open `.env` and set the following:
 
 ## 📦 Data Preparation
 
-Before running the server, you need to prepare the catalog and build the vector index.
+Before running the server, you need to prepare the catalog and build the vector index based on the `Knowledge_Bank.txt` data.
 
-### 1. Prepare Product Catalog
-Convert your CSV data into the optimized JSON format:
+### 1. Parse Knowledge Bank
+Parse the raw Bangla text data into structured JSON format:
 ```bash
-python3 scripts/prepare_catalog.py --input path/to/your/products.csv --output data/products.json
+python3 scripts/parse_knowledge_bank.py
 ```
 
 ### 2. Build FAISS Index

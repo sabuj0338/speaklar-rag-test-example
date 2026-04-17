@@ -14,6 +14,7 @@ IntentName = Literal[
     "product_search",
     "product_detail",
     "recommendation",
+    "budget_search",
     "comparison",
     "out_of_scope",
     "unknown",
@@ -25,7 +26,7 @@ class RouterResult(BaseModel):
     intent: str = "unknown"
     product: str | None = None
     category: str | None = None
-    price_filter: str | None = None  # "min", "max", "under_500", etc.
+    price_filter: str | int | float | None = None  # "min", "max", 500, etc.
     is_relevant: bool = True
     confidence: float = 0.0
     reasoning: str | None = None  # LLM's brief explanation of its routing decision
